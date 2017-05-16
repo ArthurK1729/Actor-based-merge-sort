@@ -12,7 +12,6 @@ import akka.util.Timeout
 import scala.concurrent.TimeoutException
 
 import scala.collection.mutable.ArrayBuffer
-
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -27,6 +26,8 @@ class Merger extends Actor{
   override def preStart(): Unit = {
     Merger.logger.info(self + " initiated")
   }
+  
+  // Merge two array buffers
   def merge(arr1: ArrayBuffer[Int], arr2: ArrayBuffer[Int]): ArrayBuffer[Int] = {
     var mergedArray: ArrayBuffer[Int] = ArrayBuffer()
 
@@ -64,14 +65,13 @@ class Merger extends Actor{
       var arrayFuture1 = mergers(0) ? ParentMerger.SendHalf(array.slice(0, array.length/2))
       var arrayFuture2 = mergers(1) ? ParentMerger.SendHalf(array.slice(array.length/2, array.length))
 
-      // LESSON OF THE DAY: Don't put sender() inside onComplete blocks. I think in those blocks, sender() refers
-      // to the sender of Merger.Reply. Or maybe not. It's a bit random
       val originalSender = sender()
       arrayFuture1.onComplete {
         case Success(Merger.Reply(arr1: ArrayBuffer[Int])) => {
           arrayFuture2.onComplete {
             case Success(Merger.Reply(arr2: ArrayBuffer[Int])) => {
               originalSender ! Merger.Reply(merge(arr1, arr2))
+              
               // Stop all offspring
               context.stop(mergers(0))
               context.stop(mergers(1))
