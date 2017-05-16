@@ -27,7 +27,8 @@ class ParentMerger extends Actor {
 
   def merge(arr1: ArrayBuffer[Int], arr2: ArrayBuffer[Int]): ArrayBuffer[Int] = {
     var mergedArray: ArrayBuffer[Int] = ArrayBuffer()
-
+    
+    // Refactor to only state the implementation for merging once
     for(x <- 1 to arr1.length + arr2.length) {
       if(arr1.nonEmpty && arr2.nonEmpty) {
         if(arr1(0) <= arr2(0)) {
@@ -59,9 +60,7 @@ class ParentMerger extends Actor {
     for(i <- 0 to 1) {
       mergers(i) = context.actorOf(Props[Merger], "merger" + i)
     }
-
-    // Parents can watch the death of their children. Whenever their children die, they are sent a
-    // Terminated(ActorRef) message, which they can act on.
+    
     context.watch(mergers(0))
     context.watch(mergers(1))
 
@@ -69,10 +68,11 @@ class ParentMerger extends Actor {
   }
 
   def receive = {
-    case Terminated(actor1) => println("OMG, they killed merger1")
-    case Terminated(actor2) => println("OMG, they killed merger2")
+    case Terminated(actor1) => println("They killed merger1")
+    case Terminated(actor2) => println("They killed merger2")
     case ParentMerger.Begin => {
       implicit var timeout = Timeout(60.seconds)
+      
       // Assumption: at the beginning the array size is 2 or greater
       var arrayFuture1 = mergers(0) ? ParentMerger.SendHalf(array.slice(0, array.length/2))
       var arrayFuture2 = mergers(1) ? ParentMerger.SendHalf(array.slice(array.length/2, array.length))
